@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="jumbotron text-center">
+  <div class="container">
+    <h1>Twitter SPAM Reporter</h1>
+</div>
+</div>
+<div class="container">
+  {% if info %}
+    <div class="alert alert-info text-center" role="alert">
+      {{ info }}
+    </div>
+  {% endif %}
+
+  {% if output %}
+    <h3><span class="glyphicon glyphicon-info-sign"></span> Output</h3>
+    <p class="multiline">{{ output }}</p>
+  {% endif %}
+
+  <h3><span class="glyphicon glyphicon-info-sign"></span> How this app works</h3>
+  <ul>
+    <li>This app uses <a href="https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/mute-block-report-users/api-reference/post-users-report_spam">Twitter API</a> to report SPAM on your behalf.</li>
+    <li>Each Twitter account has limit of 50 SPAM reports per hour via API.</li>
+    <li>You won't see any notifications about reports done by Twitter API on your Twitter account.</li>
+    <li>To disconnect this app from your Twitter account use this link: <a href="https://twitter.com/settings/connected_apps">connected apps</a>.</li>
+    <li>You can pass a list of usernames or Twitter IDs separated by a new line. <a href="https://tweeterid.com/">Twitter ID and username converter.</a></li>
+  </ul>
+  <div class="row">
+    <h3><span class="glyphicon glyphicon-link"></span> Accounts to report</h3>
+    <ul>
+      <form action="/report/" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" class="btn btn-lg btn-primary"/>
+     </form>
+    </ul>
+  </div>
+</div>
+{% endblock %}
