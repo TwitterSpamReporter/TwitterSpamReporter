@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from gettingstarted import settings
 from django.utils.html import escape
@@ -23,7 +24,8 @@ def index(request):
             return render(request, "index.html", {"form": form, "info": "Failed to authenticate using Twitter"})
         oauth_verifier = request.GET['oauth_verifier']
         accounts = parse_input(request.session.get('form_value'))
-        output = do_report(request_token, oauth_verifier, accounts)
+        block_option = request.session.get('block_option')
+        output = do_report(request_token, oauth_verifier, accounts, block_option)
         return render(request, "index.html", {"form": form, "output": output})
     else:
         return render(request, "index.html", {"form": form})
@@ -35,6 +37,7 @@ def parse_input(accounts):
     for account in accounts:
         account = account.replace('\r', '')
         account = account.replace('@', '')
+        account = account.strip()
         account = account.replace('https://twitter.com/', '')
         account = account.replace('https://mobile.twitter.com/', '')
         if account.isdigit():
@@ -53,17 +56,19 @@ def report(request):
     if request.method == 'POST':
         form = ReportForm(request.POST)
         if form.is_valid():
+            block_option = form.cleaned_data['block_option']
             in_value = escape(form.cleaned_data['twitter_accounts'])
             if len(in_value) > 3000 or in_value.count('\n') > 55:
                 return render(request, "index.html", {"form": form, "info": "Input too long"})
             request.session['form_value'] = in_value
+            request.session['block_option'] = block_option
         else:
             return render(request, "index.html", {"form": form, "info": "Form is not valid"})
 
     return redirect(authorization_url)
 
 
-def do_report(request_token, oauth_verifier, accounts):
+def do_report(request_token, oauth_verifier, accounts, block=False):
     logger = logging.getLogger(__name__)
     if not logger.hasHandlers():
         logger.addHandler(logging.StreamHandler())
@@ -79,9 +84,9 @@ def do_report(request_token, oauth_verifier, accounts):
             output += 'Reporting: ' + account_name + '\n'
             try:
                 if account_type == 'user_id':
-                    user = twitter_api.report_spam(user_id=account_name, perform_block=False)
+                    user = twitter_api.report_spam(user_id=account_name, perform_block=block)
                 else:
-                    user = twitter_api.report_spam(screen_name=account_name, perform_block=False)
+                    user = twitter_api.report_spam(screen_name=account_name, perform_block=block)
                 output += 'Reported: https://twitter.com/' + user.screen_name + '\n'
                 logger.info('Reported: https://twitter.com/' + user.screen_name)
             except TweepError as e:
@@ -91,5 +96,5 @@ def do_report(request_token, oauth_verifier, accounts):
                     raise e
     except TweepError as e:
         output += e.reason + '\n'
-    output += 'Done'
+    output += 'Done(' + str(datetime.now()) + ')'
     return escape(output)
